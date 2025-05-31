@@ -1,50 +1,88 @@
 package com.ecommerce.project.controller;
 
+import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Category;
-import com.ecommerce.project.sevice.CategoryService;
+import com.ecommerce.project.response.APIResponse;
+import com.ecommerce.project.sevice.category.ICategoryService;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/categories")
+@RequiredArgsConstructor
 public class CategoryController {
 
     @Autowired
-   private CategoryService categoryService;
+    private ICategoryService categoryService;
 
-    @RequestMapping(value="/public/categories", method = RequestMethod.GET)
-    public ResponseEntity<List<Category>> getAllCategories() {
-        List<Category> allCategories = categoryService.getAllCategories();
-        return new ResponseEntity<>(allCategories, HttpStatus.OK);
-    }
-
-    @RequestMapping(value="/public/categories", method = RequestMethod.POST)
-    public ResponseEntity<String> createCategories(@RequestBody Category category) {
-        categoryService.createCategory(category);
-        return new ResponseEntity<>("Category added  successfully !", HttpStatus.CREATED);
-    }
-
-    @RequestMapping(value ="/admin/categories/{categoryId}", method = RequestMethod.DELETE)
-    public ResponseEntity<String> deleteCategory(@PathVariable Long categoryId) {
+    @GetMapping("/allCategories")
+    public ResponseEntity<APIResponse> getAllCategories() {
         try {
-            String status = categoryService.deleteCategory(categoryId);
-            return new ResponseEntity<>(status, HttpStatus.OK);
-        } catch (ResponseStatusException e) {
-            return new ResponseEntity<>(e.getReason(), e.getStatusCode());
+            List<Category> allCategories = categoryService.getAllCategories();
+            return  ResponseEntity.ok(new APIResponse("Found!!" , allCategories));
+        } catch (Exception e) {
+            return  ResponseEntity.status(INTERNAL_SERVER_ERROR).body(new APIResponse("Error",INTERNAL_SERVER_ERROR ));
         }
     }
 
-    @RequestMapping(value ="/public/categories/{categoryId}", method = RequestMethod.PUT)
-    public ResponseEntity<String> updateCategory(@RequestBody Category category, @PathVariable Long categoryId) {
+
+    @PostMapping("/addCategory")
+    public ResponseEntity<APIResponse> addCategory(@RequestBody Category category) {
+        try {
+            Category addedcategory = categoryService.addCategory(category);
+            return ResponseEntity.ok(new APIResponse("Category added successfully !!", addedcategory));
+        } catch (Exception e) {
+            return  ResponseEntity.status(INTERNAL_SERVER_ERROR).body(new APIResponse("Error",INTERNAL_SERVER_ERROR ));
+        }
+    }
+
+    @GetMapping("/getCategory/{categoryId}")
+    public ResponseEntity<APIResponse> getCategoryById(@PathVariable Long categoryId) {
+        try {
+            Category category = categoryService.getCategoryById(categoryId);
+            return  ResponseEntity.ok(new APIResponse("Success!!" , category));
+        } catch (ResourceNotFoundException e) {
+            return  ResponseEntity.status(NOT_FOUND).body(new APIResponse(e.getMessage(),null ));
+        }
+    }
+
+    @GetMapping("/getCategory/{categoryName}")
+    public ResponseEntity<APIResponse> getCategoryByName(@PathVariable String categoryName) {
+        try {
+            Category category = categoryService.getCategoryByName(categoryName);
+            return  ResponseEntity.ok(new APIResponse("Success!!" , category));
+        } catch (Exception e) {
+            return  ResponseEntity.status(NOT_FOUND).body(new APIResponse("Category Not Found!!" ,NOT_FOUND));
+        }
+    }
+
+    @DeleteMapping("/category/delete/{categoryId}")
+    public ResponseEntity<APIResponse> deleteCategory(@PathVariable Long categoryId) {
+        try {
+            categoryService.deleteCategory(categoryId);
+            return  ResponseEntity.ok(new APIResponse("Category Deleted!!", categoryId));
+        } catch (ResourceNotFoundException e) {
+            return  ResponseEntity.status(INTERNAL_SERVER_ERROR).body(new APIResponse(e.getMessage(), null));
+        }
+    }
+
+    @PutMapping(value ="/category/update/{categoryId}")
+    public ResponseEntity<APIResponse> updateCategory(@RequestBody Category category, @PathVariable Long categoryId) {
         try {
             Category savedCategory = categoryService.updateCategory(category, categoryId);
-            return new ResponseEntity<>("Category with categoryId: " + categoryId + " saved successfully", HttpStatus.OK);
+            return ResponseEntity.ok(new APIResponse("Category Updated!!", categoryId));
         } catch (ResponseStatusException e) {
-            return new ResponseEntity<>(e.getReason(), e.getStatusCode());
+            return  ResponseEntity.status(INTERNAL_SERVER_ERROR).body(new APIResponse(e.getMessage(), null));
         }
     }
 
